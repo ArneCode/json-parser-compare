@@ -36,8 +36,13 @@ def plot_parse(data: dict, out_path: pathlib.Path) -> None:
         print("error: no results to plot", file=sys.stderr)
         sys.exit(1)
 
-    all_backends = {r["backend"] for r in results}
+    all_backends = {r["backend"] for r in results if r.get("median_s") is not None}
     fixtures = data.get("fixtures") or sorted({r["fixture"] for r in results})
+    parse_failures = data.get("parse_failures") or [
+        {"backend": r["backend"], "fixture": r["fixture"]}
+        for r in results
+        if r.get("error")
+    ]
 
     by_key = {
         (r["backend"], r["fixture"]): median_ms(r)
@@ -45,24 +50,19 @@ def plot_parse(data: dict, out_path: pathlib.Path) -> None:
         if r.get("median_s") is not None
     }
 
-    # Order bars by median time (one fixture: that file; several: mean across fixtures).
-    if len(fixtures) == 1:
-        sort_key = {
-            b: by_key.get((b, fixtures[0])) for b in all_backends
-        }
-    else:
-        sort_key = {
-            b: sum(by_key.get((b, f), 0.0) for f in fixtures) / len(fixtures)
-            for b in all_backends
-        }
-    backends = sort_backends_by_time(all_backends, sort_key)
+    # Global bar order: mean median over fixtures each backend actually passed.
+    sort_key: dict[str, float] = {}
+    for b in all_backends:
+        times = [by_key[(b, f)] for f in fixtures if (b, f) in by_key]
+        if times:
+            sort_key[b] = sum(times) / len(times)
+    backends_sorted = sort_backends_by_time(all_backends, sort_key)
 
-    x = np.arange(len(backends))
     n_fix = len(fixtures)
     fig, axes = plt.subplots(
         1,
         n_fix,
-        figsize=(max(12, len(backends) * 0.5) * max(n_fix, 1) / 2, 5),
+        figsize=(max(12, 8) * max(n_fix, 1) / 2, 5),
         squeeze=False,
         sharey=False,
     )
@@ -72,7 +72,13 @@ def plot_parse(data: dict, out_path: pathlib.Path) -> None:
 
     for ax_idx, fixture in enumerate(fixtures):
         ax = axes[ax_idx] if len(fixtures) > 1 else axes[0]
-        values = [by_key.get((b, fixture), 0.0) for b in backends]
+        backends = [b for b in backends_sorted if (b, fixture) in by_key]
+        if not backends:
+            ax.set_title(f"{fixture} (no successful parses)")
+            ax.axis("off")
+            continue
+        x = np.arange(len(backends))
+        values = [by_key[(b, fixture)] for b in backends]
         bars = ax.bar(x, values, color=colors[ax_idx % len(colors)], width=0.7)
         ax.set_title(fixture)
         ax.set_ylabel("median time (ms)")
@@ -83,6 +89,9 @@ def plot_parse(data: dict, out_path: pathlib.Path) -> None:
     title = "JSON parse time (hyperfine, release CLI)"
     if data.get("rustc"):
         title += f"\n{data['rustc']}"
+    if parse_failures:
+        failed = ", ".join(f"{f['backend']}×{f['fixture']}" for f in parse_failures)
+        title += f"\nExcluded from chart: {failed}"
     fig.suptitle(title)
     fig.tight_layout()
     out_path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,16 +1,21 @@
+//! JSON parser for the nom benchmark app.
+//!
+//! String parsing follows the fragment + `fold` approach from nom's
+//! [`examples/string.rs`](https://github.com/rust-bakery/nom/blob/main/examples/string.rs),
+//! adapted to `bytes::complete` and JSON escapes (`\u` + four hex digits).
+
 use nom::{
     branch::alt,
-    bytes::complete::{escaped, tag, take_while},
-    character::complete::{alphanumeric1 as alphanumeric, char, one_of},
-    combinator::{cut, map, opt, value},
+    bytes::complete::{is_not, tag, take_while, take_while_m_n},
+    character::complete::char,
+    combinator::{cut, map, map_opt, opt, value, verify},
     error::{context, ContextError, ParseError},
-    multi::separated_list0,
+    multi::{fold, separated_list0},
     number::complete::double,
     sequence::{delimited, preceded, separated_pair, terminated},
     IResult, Parser,
 };
 use std::collections::HashMap;
-use std::str;
 
 #[derive(Debug, PartialEq)]
 pub enum JsonValue {
@@ -23,21 +28,73 @@ pub enum JsonValue {
 }
 
 fn sp<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    let chars = " \t\r\n";
-
-    take_while(move |c| chars.contains(c))(i)
+    take_while(|c: char| " \t\r\n".contains(c)).parse(i)
 }
 
-fn parse_str<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    escaped(alphanumeric, '\\', one_of("\"n\\"))(i)
+/// JSON `\uXXXX` escape (four hex digits).
+fn parse_json_unicode<'a, E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, char, E> {
+    map_opt(
+        take_while_m_n(4, 4, |c: char| c.is_ascii_hexdigit()),
+        |hex: &str| u32::from_str_radix(hex, 16).ok().and_then(char::from_u32),
+    )
+    .parse(input)
+}
+
+fn parse_escaped_char<'a, E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, char, E> {
+    preceded(
+        char('\\'),
+        alt((
+            value('\n', char('n')),
+            value('\r', char('r')),
+            value('\t', char('t')),
+            value('\u{08}', char('b')),
+            value('\u{0C}', char('f')),
+            value('\\', char('\\')),
+            value('/', char('/')),
+            value('"', char('"')),
+            preceded(char('u'), parse_json_unicode),
+        )),
+    )
+    .parse(input)
+}
+
+fn parse_literal<'a, E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, &'a str, E> {
+    verify(is_not("\"\\"), |s: &str| !s.is_empty()).parse(input)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StringFragment<'a> {
+    Literal(&'a str),
+    EscapedChar(char),
+}
+
+fn parse_fragment<'a, E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, StringFragment<'a>, E> {
+    alt((
+        map(parse_literal, StringFragment::Literal),
+        map(parse_escaped_char, StringFragment::EscapedChar),
+    ))
+    .parse(input)
+}
+
+fn parse_json_string<'a, E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, String, E> {
+    let build_string = fold(
+        0..,
+        parse_fragment,
+        String::new,
+        |mut string, fragment| {
+            match fragment {
+                StringFragment::Literal(s) => string.push_str(s),
+                StringFragment::EscapedChar(c) => string.push(c),
+            }
+            string
+        },
+    );
+
+    delimited(char('"'), build_string, char('"')).parse(input)
 }
 
 fn boolean<'a, E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, bool, E> {
-    let parse_true = value(true, tag("true"));
-
-    let parse_false = value(false, tag("false"));
-
-    alt((parse_true, parse_false)).parse(input)
+    alt((value(true, tag("true")), value(false, tag("false")))).parse(input)
 }
 
 fn null<'a, E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, (), E> {
@@ -46,12 +103,8 @@ fn null<'a, E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, (), E> {
 
 fn string<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
     i: &'a str,
-) -> IResult<&'a str, &'a str, E> {
-    context(
-        "string",
-        preceded(char('\"'), cut(terminated(parse_str, char('\"')))),
-    )
-    .parse(i)
+) -> IResult<&'a str, String, E> {
+    nom::error::context("string", parse_json_string).parse(i)
 }
 
 fn array<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
@@ -72,7 +125,7 @@ fn array<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
 
 fn key_value<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
     i: &'a str,
-) -> IResult<&'a str, (&'a str, JsonValue), E> {
+) -> IResult<&'a str, (String, JsonValue), E> {
     separated_pair(
         preceded(sp, string),
         cut(preceded(sp, char(':'))),
@@ -91,12 +144,7 @@ fn hash<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
             cut(terminated(
                 map(
                     separated_list0(preceded(sp, char(',')), key_value),
-                    |tuple_vec| {
-                        tuple_vec
-                            .into_iter()
-                            .map(|(k, v)| (String::from(k), v))
-                            .collect()
-                    },
+                    |pairs| pairs.into_iter().collect(),
                 ),
                 preceded(sp, char('}')),
             )),
@@ -113,7 +161,7 @@ fn json_value<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
         alt((
             map(hash, JsonValue::Object),
             map(array, JsonValue::Array),
-            map(string, |s| JsonValue::Str(String::from(s))),
+            map(string, JsonValue::Str),
             map(double, JsonValue::Num),
             map(boolean, JsonValue::Boolean),
             map(null, |_| JsonValue::Null),

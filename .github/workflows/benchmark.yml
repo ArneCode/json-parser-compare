@@ -16,30 +16,16 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target
 
 concurrency:
   group: benchmark-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  compile:
-    name: Compile examples
+  benchmark:
+    name: Build and parse benchmark
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: .
-      - name: cargo build --release
-        run: cargo build --release
-        env:
-          CARGO_TARGET_DIR: ${{ github.workspace }}/target
-
-  parse-benchmark:
-    name: Parse benchmark (hyperfine)
-    runs-on: ubuntu-latest
-    needs: compile
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

@@ -172,6 +172,12 @@ def run_parse_benchmarks(
                     }
                 )
 
+    parse_failures = [
+        {"backend": r["backend"], "fixture": r["fixture"]}
+        for r in results
+        if r.get("error")
+    ]
+
     payload = {
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "hostname": platform.node(),
@@ -182,6 +188,7 @@ def run_parse_benchmarks(
         "method": "hyperfine",
         "note": "CLI parse: process + read file + parse (release binaries)",
         "fixtures": [f.stem for f in fixtures],
+        "parse_failures": parse_failures,
         "results": results,
     }
 
