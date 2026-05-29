@@ -12,7 +12,7 @@ GitHub Actions ([`.github/workflows/benchmark.yml`](.github/workflows/benchmark.
 2. `./bench.py` (parse benchmarks only; no debug build timing in CI)  
 3. Uploads `results/results.json` and `results/chart.png` as workflow artifacts  
 
-CI sets `BENCH_MIN_RUNS=7` (override locally via `BENCH_MIN_RUNS` / `BENCH_WARMUP`).
+Parse hyperfine defaults (local and CI): `--warmup=3` `--min-runs=10` (stricter than [parse-rosetta-rs](https://github.com/epage/parse-benchmarks-rs), which uses `1` and `5`). Override via `BENCH_WARMUP` / `BENCH_MIN_RUNS`.
 
 ## Prerequisites
 

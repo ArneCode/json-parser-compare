@@ -16,9 +16,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  # Slightly fewer hyperfine runs than local defaults to keep CI time reasonable.
-  BENCH_WARMUP: "3"
-  BENCH_MIN_RUNS: "7"
 
 concurrency:
   group: benchmark-${{ github.workflow }}-${{ github.ref }}
