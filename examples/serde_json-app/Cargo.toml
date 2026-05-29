@@ -1,0 +1,13 @@
+[package]
+name = "serde_json-app"
+edition.workspace = true
+
+[[bin]]
+name = "serde_json-app"
+path = "app.rs"
+
+[dependencies]
+serde_json = "1.0.149"
+
+[lints]
+workspace = true

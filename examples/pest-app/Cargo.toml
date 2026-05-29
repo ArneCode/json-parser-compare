@@ -1,0 +1,14 @@
+[package]
+name = "pest-app"
+edition.workspace = true
+
+[[bin]]
+name = "pest-app"
+path = "app.rs"
+
+[dependencies]
+pest = "2.8.6"
+pest_derive = "2.8.6"
+
+[lints]
+workspace = true

@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = [
+    "examples/*",
+]
+
+[workspace.package]
+edition = "2021"
+
+[workspace.lints.rust]
+dead_code = "allow"  # relying on `black_box` / debug repr

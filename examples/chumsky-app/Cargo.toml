@@ -1,0 +1,13 @@
+[package]
+name = "chumsky-app"
+edition.workspace = true
+
+[[bin]]
+name = "chumsky-app"
+path = "app.rs"
+
+[dependencies]
+chumsky = "0.12.0"
+
+[lints]
+workspace = true

@@ -1,0 +1,13 @@
+[package]
+name = "combine-app"
+edition.workspace = true
+
+[[bin]]
+name = "combine-app"
+path = "app.rs"
+
+[dependencies]
+combine = "3.8.1"
+
+[lints]
+workspace = true

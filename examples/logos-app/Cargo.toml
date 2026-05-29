@@ -1,0 +1,13 @@
+[package]
+name = "logos-app"
+edition.workspace = true
+
+[[bin]]
+name = "logos-app"
+path = "app.rs"
+
+[dependencies]
+logos = "0.16.1"
+
+[lints]
+workspace = true

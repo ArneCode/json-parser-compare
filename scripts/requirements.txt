@@ -1,0 +1,2 @@
+# AI assistance: written with AI assistance; maintainer reviewed.
+matplotlib>=3.8

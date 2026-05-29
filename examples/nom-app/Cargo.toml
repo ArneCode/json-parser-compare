@@ -1,0 +1,14 @@
+[package]
+name = "nom-app"
+edition.workspace = true
+
+[[bin]]
+name = "nom-app"
+path = "app.rs"
+
+[dependencies]
+nom = "8.0.0"
+nom-language = "0.1.0"
+
+[lints]
+workspace = true

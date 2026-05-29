@@ -1,0 +1,65 @@
+# AI assistance: written with AI assistance; maintainer reviewed.
+name: Benchmark
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+  # Weekly parse benchmarks on a clean Ubuntu runner (more stable than typical laptops).
+  - cron: "0 6 * * 1"
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  # Slightly fewer hyperfine runs than local defaults to keep CI time reasonable.
+  BENCH_WARMUP: "3"
+  BENCH_MIN_RUNS: "7"
+
+concurrency:
+  group: benchmark-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    name: Compile examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: .
+      - name: cargo build --release
+        run: cargo build --release
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/target
+
+  parse-benchmark:
+    name: Parse benchmark (hyperfine)
+    runs-on: ubuntu-latest
+    needs: compile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: .
+      - name: Install hyperfine
+        run: sudo apt-get update && sudo apt-get install -y hyperfine
+      - name: Install Python dependencies
+        run: pip install -r scripts/requirements.txt
+      - name: Run parse benchmarks
+        run: ./bench.py
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            results/results.json
+            results/chart.png
+          if-no-files-found: error

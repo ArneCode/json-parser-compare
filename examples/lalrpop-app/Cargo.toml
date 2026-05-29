@@ -1,0 +1,16 @@
+[package]
+name = "lalrpop-app"
+edition.workspace = true
+
+[[bin]]
+name = "lalrpop-app"
+path = "app.rs"
+
+[build-dependencies]
+lalrpop = { version = "0.23", features = ["lexer", "unicode"] }
+
+[dependencies]
+lalrpop-util = { version = "0.23", features = ["lexer", "unicode"] }
+
+[lints]
+workspace = true

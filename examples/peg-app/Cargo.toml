@@ -1,0 +1,13 @@
+[package]
+name = "peg-app"
+edition.workspace = true
+
+[[bin]]
+name = "peg-app"
+path = "app.rs"
+
+[dependencies]
+peg = "0.8.5"
+
+[lints]
+workspace = true

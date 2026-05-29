@@ -1,0 +1,20 @@
+[package]
+name = "grmtools-app"
+edition.workspace = true
+
+[[bin]]
+name = "grmtools-app"
+path = "app.rs"
+
+[build-dependencies]
+cfgrammar = "0.14"
+lrlex = "0.14"
+lrpar = "0.14"
+
+[dependencies]
+cfgrammar = "0.14"
+lrlex = "0.14"
+lrpar = "0.14"
+
+[lints]
+workspace = true
