@@ -13,6 +13,10 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
+# Backend names match `*-app` directory stems (without `-app`).
+MARSER_BACKENDS = frozenset({"marser", "marser-bare"})
+MARSER_BAR_COLOR = "#2ca02c"
+
 
 def load_results(path: pathlib.Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -28,6 +32,12 @@ def sort_backends_by_time(
 ) -> list[str]:
     """Fastest (lowest median) first; missing times last."""
     return sorted(backends, key=lambda b: (times.get(b) is None, times.get(b, float("inf"))))
+
+
+def bar_colors(backends: list[str], default_color) -> list:
+    return [
+        MARSER_BAR_COLOR if b in MARSER_BACKENDS else default_color for b in backends
+    ]
 
 
 def plot_parse(data: dict, out_path: pathlib.Path) -> None:
@@ -50,14 +60,6 @@ def plot_parse(data: dict, out_path: pathlib.Path) -> None:
         if r.get("median_s") is not None
     }
 
-    # Global bar order: mean median over fixtures each backend actually passed.
-    sort_key: dict[str, float] = {}
-    for b in all_backends:
-        times = [by_key[(b, f)] for f in fixtures if (b, f) in by_key]
-        if times:
-            sort_key[b] = sum(times) / len(times)
-    backends_sorted = sort_backends_by_time(all_backends, sort_key)
-
     n_fix = len(fixtures)
     fig, axes = plt.subplots(
         1,
@@ -72,14 +74,22 @@ def plot_parse(data: dict, out_path: pathlib.Path) -> None:
 
     for ax_idx, fixture in enumerate(fixtures):
         ax = axes[ax_idx] if len(fixtures) > 1 else axes[0]
-        backends = [b for b in backends_sorted if (b, fixture) in by_key]
+        backends_here = [b for b in all_backends if (b, fixture) in by_key]
+        fixture_times = {b: by_key[(b, fixture)] for b in backends_here}
+        backends = sort_backends_by_time(backends_here, fixture_times)
         if not backends:
             ax.set_title(f"{fixture} (no successful parses)")
             ax.axis("off")
             continue
         x = np.arange(len(backends))
         values = [by_key[(b, fixture)] for b in backends]
-        bars = ax.bar(x, values, color=colors[ax_idx % len(colors)], width=0.7)
+        default_color = colors[ax_idx % len(colors)]
+        bars = ax.bar(
+            x,
+            values,
+            color=bar_colors(backends, default_color),
+            width=0.7,
+        )
         ax.set_title(fixture)
         ax.set_ylabel("median time (ms)")
         ax.set_xticks(x)
@@ -113,7 +123,13 @@ def plot_build(data: dict, out_path: pathlib.Path) -> None:
     values = [by_backend[b] for b in backends]
 
     fig, ax = plt.subplots(figsize=(max(10, len(backends) * 0.55), 5))
-    bars = ax.bar(x, values, color=plt.cm.tab10(0.2), width=0.7)
+    default_color = plt.cm.tab10(0.2)
+    bars = ax.bar(
+        x,
+        values,
+        color=bar_colors(backends, default_color),
+        width=0.7,
+    )
     ax.set_ylabel("median time (s)")
     ax.set_xticks(x)
     ax.set_xticklabels(backends, rotation=45, ha="right")
