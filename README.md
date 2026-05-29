@@ -86,7 +86,7 @@ Fixtures (from [nativejson-benchmark](https://github.com/miloyip/nativejson-benc
 | Example | Role |
 |---------|------|
 | `marser-app` | Vendored rosetta grammar: recovery, `Invalid` values, rich error hooks (`try_insert_if_missing`, `if_error`, annotations). |
-| `marser-bare-app` | Same AST shape without recovery or error-reporting matchers — closer to the other minimal JSON demos for timing. |
+| `marser-bare-app` | Same AST shape without recovery, `Invalid`, or error-reporting matchers; still uses `commit_on` on numbers, strings, arrays, and objects. |
 
 ### Deviations from parse-rosetta-rs
 

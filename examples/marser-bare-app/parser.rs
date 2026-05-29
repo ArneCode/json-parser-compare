@@ -1,6 +1,7 @@
 //! AI assistance: this file was written with AI assistance. The maintainer reviewed it and did not find errors.
 //!
 //! Minimal marser JSON grammar for benchmarks: no recovery, no error annotations, no `Invalid` values.
+//! Still uses [`commit_on`] on numbers, strings, arrays, and objects (backtracking / performance).
 
 use std::rc::Rc;
 
@@ -9,6 +10,7 @@ use marser::{
     matcher::{
         commit_matcher::commit_on,
         multiple::many,
+        negative_lookahead,
         one_or_more::one_or_more,
         optional::optional,
         positive_lookahead,
@@ -39,7 +41,7 @@ pub fn get_json_grammar<'src>() -> impl Parser<'src, &'src str, Output = JsonVal
 
         let number = capture!(
             commit_on(
-                positive_lookahead(one_of(('-', '0'..='9'))),
+                positive_lookahead(one_of(('-', '.', '+', '0'..='9'))),
                 bind_slice!((
                     optional('-'),
                     one_of(('0', ('1'..='9', many('0'..='9')))),
@@ -49,6 +51,7 @@ pub fn get_json_grammar<'src>() -> impl Parser<'src, &'src str, Output = JsonVal
                         optional(one_of(('+', '-'))),
                         one_or_more('0'..='9')
                     )),
+                    negative_lookahead(one_of(('+', '-', '0'..='9', '.', 'e', 'E'))),
                 ), slice as &'src str)
             ) => JsonValue::Number(slice.parse().unwrap_or(0.0))
         );
@@ -89,15 +92,17 @@ pub fn get_json_grammar<'src>() -> impl Parser<'src, &'src str, Output = JsonVal
         });
         let raw_string = Rc::new(
             capture!({
-                (
+                commit_on(
                     '"',
-                    many(one_of((
-                        bind!(character.clone(), *chars),
-                        bind!(escaped_char, *chars),
-                        bind!(unicode_escape, *chars),
-                    ))),
-                    '"',
-                    ws.clone(),
+                    (
+                        many(one_of((
+                            bind!(character.clone(), *chars),
+                            bind!(escaped_char, *chars),
+                            bind!(unicode_escape, *chars),
+                        ))),
+                        '"',
+                        ws.clone(),
+                    )
                 )
             } => chars.into_iter().collect::<String>())
                 .erase_types(),
@@ -106,16 +111,18 @@ pub fn get_json_grammar<'src>() -> impl Parser<'src, &'src str, Output = JsonVal
         let string = raw_string.clone().map_output(JsonValue::String);
 
         let array = capture!({
-            (
-                '[',
-                ws.clone(),
-                optional((
-                    bind!(element.clone(), *elements),
-                    many((',', ws.clone(), bind!(element.clone(), *elements))),
-                )),
-                ws.clone(),
-                ']',
-                ws.clone(),
+            commit_on(
+                (ws.clone(), '['),
+                (
+                    ws.clone(),
+                    optional((
+                        bind!(element.clone(), *elements),
+                        many((',', ws.clone(), bind!(element.clone(), *elements))),
+                    )),
+                    ws.clone(),
+                    ']',
+                    ws.clone(),
+                )
             )
         } => JsonValue::Array(elements))
         .erase_types();
@@ -133,16 +140,18 @@ pub fn get_json_grammar<'src>() -> impl Parser<'src, &'src str, Output = JsonVal
         );
 
         let object = capture!({
-            (
-                '{',
-                ws.clone(),
-                optional((
-                    bind!(key_value_pair.clone(), *pairs),
-                    many((',', ws.clone(), bind!(key_value_pair.clone(), *pairs))),
-                )),
-                ws.clone(),
-                '}',
-                ws.clone(),
+            commit_on(
+                (ws.clone(), '{'),
+                (
+                    ws.clone(),
+                    optional((
+                        bind!(key_value_pair.clone(), *pairs),
+                        many((',', ws.clone(), bind!(key_value_pair.clone(), *pairs))),
+                    )),
+                    ws.clone(),
+                    '}',
+                    ws.clone(),
+                )
             )
         } => JsonValue::Object(pairs))
         .erase_types();
