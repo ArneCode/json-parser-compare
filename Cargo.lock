@@ -980,8 +980,9 @@ dependencies = [
 
 [[package]]
 name = "marser"
-version = "0.1.3"
-source = "git+https://github.com/ArneCode/marser.git?branch=mode_for_recov_and_commit#39785cf3939ab27bffa1d575fa4e35566412fd7e"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd31587c03084dc507cda8480e162d16016d473442d9cbe50b5a5fb3c1915b33"
 dependencies = [
  "marser_macros",
 ]
@@ -1003,7 +1004,8 @@ dependencies = [
 [[package]]
 name = "marser_macros"
 version = "0.1.0"
-source = "git+https://github.com/ArneCode/marser.git?branch=mode_for_recov_and_commit#39785cf3939ab27bffa1d575fa4e35566412fd7e"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4f2e0a5f7c80bb9ff8c3a6d46270afd332887689ba760134ef0676d1a91560c5"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",

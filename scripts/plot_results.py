@@ -62,13 +62,13 @@ def plot_parse(data: dict, out_path: pathlib.Path) -> None:
 
     n_fix = len(fixtures)
     fig, axes = plt.subplots(
-        1,
         n_fix,
-        figsize=(max(12, 8) * max(n_fix, 1) / 2, 5),
+        1,
+        figsize=(max(12, 8) / 2, 5 * max(n_fix, 1)),
         squeeze=False,
         sharey=False,
     )
-    axes = axes[0]
+    axes = axes[:, 0]
 
     colors = plt.cm.tab10(np.linspace(0, 1, max(len(fixtures), 1)))
 

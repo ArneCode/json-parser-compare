@@ -2,23 +2,12 @@
 
 **AI assistance:** This document was drafted with AI assistance. The maintainer reviewed it. If anything looks wrong, please open an issue in your fork or upstream.
 
-Compare Rust JSON parser examples (vendored from [parse-rosetta-rs](https://github.com/epage/parse-benchmarks-rs)) on shared fixtures, then plot parse times as a bar chart.
+Compare Rust JSON parser examples (vendored from [parse-rosetta-rs](https://github.com/rosetta-rs/parse-rosetta-rs)) on shared fixtures, then plot parse times as a bar chart. Nom example was slightly modified because it failed on twitter.json and citm_catalog.json. Some other examples still fail on those fixtures, they are excluded from the resulting bar chart.
 
-## Continuous integration
+## Results:
+Ran benchmark on github actions because my laptops performance is pretty unreliable.
 
-GitHub Actions ([`.github/workflows/benchmark.yml`](.github/workflows/benchmark.yml)) runs on pushes, pull requests, weekly schedule, and manual **workflow_dispatch** in a single job:
-
-1. `./bench.py` — `cargo build --release` then hyperfine parse benchmarks (no debug build timing in CI)  
-2. Uploads `results/results.json` and `results/chart.png` as workflow artifacts  
-
-Parse hyperfine defaults (local and CI): `--warmup=3` `--min-runs=10` (stricter than [parse-rosetta-rs](https://github.com/epage/parse-benchmarks-rs), which uses `1` and `5`). Override via `BENCH_WARMUP` / `BENCH_MIN_RUNS`.
-
-## Prerequisites
-
-- Rust toolchain (`cargo build --release`)
-- [hyperfine](https://github.com/sharkdp/hyperfine) on `PATH` (e.g. `cargo install hyperfine`)
-- Python 3 + matplotlib for the chart (`pip install -r scripts/requirements.txt`)
-
+marser examples marked in green. "marser" is an example with full error recovery / error information etc. "marser-bare" is an example without error recovery etc.
 ## Quick start
 
 **Parse benchmarks only** (default):
@@ -83,9 +72,9 @@ Fixtures (from [nativejson-benchmark](https://github.com/miloyip/nativejson-benc
 
 ### `marser-app` vs `marser-bare-app`
 
-| Example | Role |
-|---------|------|
-| `marser-app` | Vendored rosetta grammar: recovery, `Invalid` values, rich error hooks (`try_insert_if_missing`, `if_error`, annotations). |
+| Example           | Role                                                                                                                                      |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `marser-app`      | Vendored rosetta grammar: recovery, `Invalid` values, rich error hooks (`try_insert_if_missing`, `if_error`, annotations).                |
 | `marser-bare-app` | Same AST shape without recovery, `Invalid`, or error-reporting matchers; still uses `commit_on` on numbers, strings, arrays, and objects. |
 
 ### Deviations from parse-rosetta-rs
@@ -102,23 +91,23 @@ This repo replaces string parsing with the **fragment + `fold` pattern** from no
 
 Last checked with the vendored examples (release build, preflight only):
 
-| Backend | twitter.json | canada.json | citm_catalog.json |
-|---------|:------------:|:-----------:|:-----------------:|
-| chumsky | ok | ok | ok |
-| combine | **fail** | ok | ok |
-| grmtools | **fail** | ok | ok |
-| lalrpop | **fail** | ok | **fail** |
-| lelwel | ok | ok | ok |
-| logos | ok | ok | ok |
-| marser | ok | ok | ok |
-| marser-bare | ok | ok | ok |
-| nom | ok | ok | ok |
-| parol | ok | ok | ok |
-| peg | ok | ok | ok |
-| pest | ok | ok | ok |
-| serde_json | ok | ok | ok |
-| winnow | ok | ok | ok |
-| yap | ok | ok | ok |
+| Backend     | twitter.json | canada.json | citm_catalog.json |
+| ----------- | :----------: | :---------: | :---------------: |
+| chumsky     |      ok      |     ok      |        ok         |
+| combine     |   **fail**   |     ok      |        ok         |
+| grmtools    |   **fail**   |     ok      |        ok         |
+| lalrpop     |   **fail**   |     ok      |     **fail**      |
+| lelwel      |      ok      |     ok      |        ok         |
+| logos       |      ok      |     ok      |        ok         |
+| marser      |      ok      |     ok      |        ok         |
+| marser-bare |      ok      |     ok      |        ok         |
+| nom         |      ok      |     ok      |        ok         |
+| parol       |      ok      |     ok      |        ok         |
+| peg         |      ok      |     ok      |        ok         |
+| pest        |      ok      |     ok      |        ok         |
+| serde_json  |      ok      |     ok      |        ok         |
+| winnow      |      ok      |     ok      |        ok         |
+| yap         |      ok      |     ok      |        ok         |
 
 Typical causes (unchanged from stock rosetta grammars):
 
