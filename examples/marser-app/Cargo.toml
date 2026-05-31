@@ -7,7 +7,7 @@ name = "marser-app"
 path = "app.rs"
 
 [dependencies]
-marser = "0.1.3"
+marser = { git = "https://github.com/ArneCode/marser.git", branch = "mode_for_recov_and_commit"}
 
 [lints]
 workspace = true
