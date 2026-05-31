@@ -48,6 +48,11 @@ def parse_args() -> argparse.Namespace:
         help="Run debug build benchmarks (hyperfine with `cargo clean` before each timed build).",
     )
     parser.add_argument(
+        "--parse-chart",
+        action="store_true",
+        help="Generate results/chart.png from results.json (does not run parse benchmarks).",
+    )
+    parser.add_argument(
         "--build-chart",
         action="store_true",
         help="Generate results/chart_build.png from build_results.json (does not run builds by itself).",
@@ -282,7 +287,8 @@ def generate_parse_chart(repo_root: pathlib.Path) -> None:
     plot_script = repo_root / "scripts" / "plot_results.py"
     parse_json = repo_root / "results" / "results.json"
     if not parse_json.is_file():
-        return
+        print(f"error: missing {parse_json} (run ./bench.py first)", file=sys.stderr)
+        sys.exit(1)
     subprocess.run(
         [
             sys.executable,
@@ -301,9 +307,12 @@ def main() -> None:
     args = parse_args()
     repo_root = pathlib.Path(__file__).resolve().parent
 
-    # --build-chart alone: regenerate chart from existing build_results.json
-    if args.build_chart and not args.build and not args.no_parse:
-        generate_build_chart(repo_root)
+    chart_only = not args.build and not args.no_parse
+    if chart_only and (args.parse_chart or args.build_chart):
+        if args.parse_chart:
+            generate_parse_chart(repo_root)
+        if args.build_chart:
+            generate_build_chart(repo_root)
         return
 
     do_parse = not args.no_parse
@@ -318,7 +327,7 @@ def main() -> None:
 
     if not do_parse and not do_build and not do_build_chart:
         print(
-            "error: nothing to do (default: parse; or --build; or --build-chart)",
+            "error: nothing to do (default: parse; or --build; or --parse-chart; or --build-chart)",
             file=sys.stderr,
         )
         sys.exit(2)

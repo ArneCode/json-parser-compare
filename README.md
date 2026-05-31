@@ -40,6 +40,13 @@ Writes `results/build_results.json` and `results/chart_build.png`.
 ./bench.py --no-parse --build --no-build-chart
 ```
 
+**Regenerate only the parse chart** from existing `results.json`:
+
+```bash
+./bench.py --parse-chart
+# or: python3 scripts/plot_results.py
+```
+
 **Regenerate only the build chart** from existing `build_results.json`:
 
 ```bash
@@ -50,7 +57,7 @@ Writes `results/build_results.json` and `results/chart_build.png`.
 Outputs:
 
 - `results/results.json` — median parse times per backend and fixture (failed pairs recorded with `error`, listed in `parse_failures`)
-- `results/chart.png` — parse bar chart (one panel per fixture; backends that failed preflight on that fixture are omitted)
+- `results/chart.png` — parse bar chart (one panel per fixture; backends that failed preflight on that fixture are omitted; regenerate with `--parse-chart` or `scripts/plot_results.py`)
 - `results/build_results.json` — median debug build time per backend (`--build`)
 - `results/chart_build.png` — debug build bar chart (`--build`, or `--build-chart`)
 

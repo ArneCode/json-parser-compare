@@ -40,6 +40,44 @@ def bar_colors(backends: list[str], default_color) -> list:
     ]
 
 
+def excluded_chart_note(parse_failures: list[dict]) -> str:
+    lines = [f"{f['backend']}×{f['fixture']}" for f in parse_failures]
+    return "Excluded from chart:\n" + "\n".join(lines)
+
+
+def apply_suptitle(fig, title: str, top_ax=None) -> None:
+    """Reserve space for a multi-line suptitle without overlapping the top axes."""
+    title_lines = title.count("\n") + 1
+    fontsize = 9 if title_lines > 3 else 10
+    if top_ax is None and fig.axes:
+        top_ax = fig.axes[0]
+
+    fig.tight_layout()
+    text = fig.suptitle(title, fontsize=fontsize, y=1.0, va="top")
+    pad = 0.12 / fig.get_figheight()  # inches → figure fraction
+
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    text_bottom = text.get_window_extent(renderer).transformed(
+        fig.transFigure.inverted()
+    ).y0
+    target = text_bottom - pad
+
+    top = target
+    for _ in range(8):
+        fig.subplots_adjust(top=top)
+        fig.canvas.draw()
+        renderer = fig.canvas.get_renderer()
+        if top_ax is None:
+            break
+        top_edge = top_ax.get_tightbbox(renderer).transformed(
+            fig.transFigure.inverted()
+        ).y1
+        if top_edge <= target:
+            break
+        top -= top_edge - target
+
+
 def plot_parse(data: dict, out_path: pathlib.Path) -> None:
     results = data["results"]
     if not results:
@@ -100,10 +138,8 @@ def plot_parse(data: dict, out_path: pathlib.Path) -> None:
     if data.get("rustc"):
         title += f"\n{data['rustc']}"
     if parse_failures:
-        failed = ", ".join(f"{f['backend']}×{f['fixture']}" for f in parse_failures)
-        title += f"\nExcluded from chart: {failed}"
-    fig.suptitle(title)
-    fig.tight_layout()
+        title += f"\n{excluded_chart_note(parse_failures)}"
+    apply_suptitle(fig, title, top_ax=axes[0])
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=150)
     plt.close(fig)
