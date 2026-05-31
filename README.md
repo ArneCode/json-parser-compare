@@ -7,6 +7,8 @@ Compare Rust JSON parser examples (vendored from [parse-rosetta-rs](https://gith
 ## Results:
 Ran benchmark on github actions because my laptops performance is pretty unreliable.
 
+![chart](chart.png)
+
 marser examples marked in green. "marser" is an example with full error recovery / error information etc. "marser-bare" is an example without error recovery etc.
 ## Quick start
 
